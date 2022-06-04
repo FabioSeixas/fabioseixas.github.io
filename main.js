@@ -131,19 +131,40 @@ __webpack_require__.r(__webpack_exports__);
 
  // Banner text
 
-var banner = "\nHello, I'm F\xE1bio, a software developer from Brazil.\n\nType 'help for a list of available commands.\n\n\n\n"; // Help text
+var banner = "\nCopyright (c) 2014 Anders Evenrud <andersevenrud@gmail.com>\n\n  Hello, I'm F\xE1bio, a software developer from Brazil.\n  Type \"help\" to know what you can do here.\n"; // Help text
 
-var helpText = "\nAvailable commands:\n\nhelp            This output\ncontact         Prints contact information\ncontact <key>   Opens up relevant contact link\nls              Lists files\ncwd             Lists current directory\ncd <dir>        Enters directory\ncat <filename>  Lists file contents\nclear           Clears the display\n"; // Contact texts
+var helpText = "\nhelp             This output\nabout            Breaf introduction of your host\ncontact          Prints contact information\ncontact <key>    Opens up relevant contact link\nclear            Clears the display \nprojects         Summary of my projects"; // ls               Lists files
+// cwd              Lists current directory
+// cd <dir>         Enters directory
+// cat <filename>    Lists file contents
+
+var projectsInfo = {
+  cassavaPy: {
+    repository: "https://github.com/FabioSeixas/CassavaPy",
+    description: "A module to write, run and get outputs from DSSAT-Manihot model"
+  },
+  emergEconRPG: {
+    repository: "https://github.com/FabioSeixas/emergEconRPG",
+    description: 'An implementation of "Emergent Economies for Role Playing Games"'
+  }
+};
+var projectList = Object.keys(projectsInfo).reduce(function (result, key) {
+  return result.concat(["".concat(key, "\n - repository: ").concat(projectsInfo[key].repository, "\n - description: ").concat(projectsInfo[key].description)]);
+}, []).join('\n\n');
+
+var _projects = "\n".concat(projectList, "\n");
+
+var aboutMe = "\nThey call me F\xE1bio\nI'm 28 years old\nI'm from Bahia, Brazil\nI have a daughter and she is seven\nMy background is on Agricultural Engineering\nI started as a professional web developer in Nov 2020\nMy first company was Badico Cloud\nI learned a ton and made very good friends there\nNow I'm focused on mobile development with React Native\nI use javascript stack most part of the time\nBut I am really curious about computing in general\nWhich makes my interests really broad\n"; // Contact texts
 
 var contactInfo = {
   email: 'dev.fabioseixas@gmail.com',
-  linkedIn: 'https://www.linkedin.com/in/fabioseixas',
-  github: 'https://github.com/FabioSeixas'
+  linkedin: 'https://www.linkedin.com/in/fabioseixas',
+  github: 'https://github.com/fabioseixas'
 };
 var contactList = Object.keys(contactInfo).reduce(function (result, key) {
   return result.concat(["".concat(key, " - ").concat(contactInfo[key])]);
 }, []).join('\n');
-var contactText = "\nCreated by Anders Evenrud\n\n".concat(contactList, "\n\nUse ex. 'contact twitter' to open the links.\n");
+var contactText = "\n\n".concat(contactList, "\n\nUse ex. 'contact linkedin' to open the links.");
 
 var openContact = function openContact(key) {
   return window.open(key === 'email' ? "mailto:".concat(contactInfo[key]) : contactInfo[key]);
@@ -251,23 +272,33 @@ var load = function load() {
     prompt: function prompt() {
       return "> ";
     },
+    promptWaiting: function promptWaiting() {
+      return "...";
+    },
     banner: banner,
     commands: {
       help: function help() {
         return helpText;
       },
-      cwd: function cwd() {
-        return browser.cwd();
+      about: function about() {
+        return aboutMe;
       },
-      cd: function cd(dir) {
-        return browser.cd(dir);
+      projects: function projects() {
+        return _projects;
       },
-      ls: function ls() {
-        return browser.ls();
+      resumeBuffer: function resumeBuffer() {
+        for (var _len = arguments.length, rest = new Array(_len), _key = 0; _key < _len; _key++) {
+          rest[_key] = arguments[_key];
+        }
+
+        return rest.map(function (string) {
+          return !string ? ' ' : "".concat(string, " ");
+        }).join('');
       },
-      cat: function cat(file) {
-        return browser.cat(file);
-      },
+      // cwd: () => browser.cwd(),
+      // cd: dir => browser.cd(dir),
+      // ls: () => browser.ls(),
+      // cat: file => browser.cat(file),
       clear: function clear() {
         return t.clear();
       },
@@ -456,10 +487,10 @@ var createOptions = function createOptions(opts) {
   return Object.assign({}, {
     banner: 'Hello World',
     prompt: function prompt() {
-      return '>';
+      return '$ > ';
     },
     tickrate: 2000 / 60,
-    buflen: 2,
+    buflen: 4,
     commands: {}
   }, opts || {});
 }; // Creates our textarea element
@@ -501,9 +532,6 @@ var renderer = function renderer(tickrate, onrender) {
   var lastTick = 0;
 
   var tick = function tick(time) {
-    console.log('time: ', time);
-    console.log('tickrate: ', tickrate);
-    console.log('onrender: ', onrender);
     var now = performance.now();
     var delta = now - lastTick;
 
@@ -520,10 +548,18 @@ var renderer = function renderer(tickrate, onrender) {
 
 
 var printer = function printer($element, buflen) {
-  return function (buffer) {
+  return function (buffer, bufferWaiting) {
     if (buffer.length > 0) {
       var len = Math.min(buflen, buffer.length);
       var val = buffer.splice(0, len);
+      var regex = new RegExp(/(\.{3}\n)|(\n+\.{3}\n)$/);
+
+      while (regex.exec($element.value)) {
+        var toRemove = regex.exec($element.value);
+        if (!toRemove) break;
+        $element.value = $element.value.slice(0, toRemove.index) + $element.value.slice(toRemove.index + toRemove[0].length) + '\n';
+      }
+
       $element.value += val.join('');
       setSelectionRange($element);
       $element.scrollTop = $element.scrollHeight;
@@ -583,8 +619,14 @@ var keyboard = function keyboard(parse) {
   };
 
   return {
-    keypress: function keypress(ev) {
+    keypress: function keypress(ev, bufferWaiting) {
       if (key(ev) === 'enter') {
+        if (bufferWaiting.length) {
+          parse('resumeBuffer ' + bufferWaiting.shift());
+          input = [];
+          return;
+        }
+
         var str = input.join('').trim();
         parse(str);
         input = [];
@@ -608,12 +650,15 @@ var keyboard = function keyboard(parse) {
 
 
 var terminal = function terminal(opts) {
+  var bufferWaiting = []; // What is waiting to be outputed 
+
   var buffer = []; // What will be output to display
 
   var busy = false; // If we cannot type at the moment
 
   var _createOptions = createOptions(opts),
       prompt = _createOptions.prompt,
+      promptWaiting = _createOptions.promptWaiting,
       banner = _createOptions.banner,
       commands = _createOptions.commands,
       buflen = _createOptions.buflen,
@@ -634,6 +679,21 @@ var terminal = function terminal(opts) {
       });
     }
 
+    if (bufferWaiting.length) {
+      var _append = lines.join('\n') + '\n' + promptWaiting();
+
+      buffer = buffer.concat(_append.split(''));
+      return;
+    } else if (lines.length > 8) {
+      bufferWaiting = lines.slice(8, lines.length - 1);
+      lines = lines.slice(0, 8);
+
+      var _append2 = lines.join('\n') + '\n' + promptWaiting();
+
+      buffer = buffer.concat(_append2.split(''));
+      return;
+    }
+
     var append = lines.join('\n') + '\n' + prompt();
     buffer = buffer.concat(append.split(''));
   };
@@ -642,7 +702,7 @@ var terminal = function terminal(opts) {
   var execute = executor(commands);
 
   var onrender = function onrender() {
-    return busy = print(buffer);
+    return busy = print(buffer, bufferWaiting);
   };
 
   var onparsed = function onparsed(cmd) {
@@ -669,7 +729,9 @@ var terminal = function terminal(opts) {
   };
 
   var input = function input(ev) {
-    return busy ? ev.preventDefault() : kbd[ev.type](ev);
+    if (!busy) return kbd[ev.type](ev, bufferWaiting);
+    if (bufferWaiting.length) return kbd[ev.type](ev, bufferWaiting);
+    return ev.preventDefault();
   };
 
   $element.addEventListener('focus', function () {

@@ -550,16 +550,18 @@ var renderer = function renderer(tickrate, onrender) {
 
 
 var printer = function printer($element, buflen) {
-  return function (buffer, bufferWaiting) {
+  return function (buffer) {
     if (buffer.length > 0) {
       var len = Math.min(buflen, buffer.length);
       var val = buffer.splice(0, len);
-      var regex = new RegExp(/(\.{3}\n)|(\n+\.{3}\n)$/);
+      var regex = new RegExp(/(\.{3}\n)|(\n+\.{3}\n)|(\n+\.{3})$/);
 
       while (regex.exec($element.value)) {
+        console.log('BEFORE: ', JSON.stringify($element.value));
         var toRemove = regex.exec($element.value);
         if (!toRemove) break;
         $element.value = $element.value.slice(0, toRemove.index) + $element.value.slice(toRemove.index + toRemove[0].length) + '\n';
+        console.log('AFTER: ', JSON.stringify($element.value));
       }
 
       $element.value += val.join('');
@@ -682,7 +684,7 @@ var terminal = function terminal(opts) {
     }
 
     if (bufferWaiting.length) {
-      var _append = lines.join('\n') + '\n' + promptWaiting();
+      var _append = lines.join('\n') + promptWaiting();
 
       buffer = buffer.concat(_append.split(''));
       return;
@@ -704,7 +706,7 @@ var terminal = function terminal(opts) {
   var execute = executor(commands);
 
   var onrender = function onrender() {
-    return busy = print(buffer, bufferWaiting);
+    return busy = print(buffer);
   };
 
   var onparsed = function onparsed(cmd) {

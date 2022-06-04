@@ -141,15 +141,17 @@ var helpText = "\nhelp             This output\nabout            Breaf introduct
 var projectsInfo = {
   cassavaPy: {
     repository: "https://github.com/FabioSeixas/CassavaPy",
+    language: "python",
     description: "A module to write, run and get outputs from DSSAT-Manihot model"
   },
   emergEconRPG: {
     repository: "https://github.com/FabioSeixas/emergEconRPG",
+    language: "C#",
     description: 'An implementation of "Emergent Economies for Role Playing Games"'
   }
 };
 var projectList = Object.keys(projectsInfo).reduce(function (result, key) {
-  return result.concat(["".concat(key, "\n - repository: ").concat(projectsInfo[key].repository, "\n - description: ").concat(projectsInfo[key].description)]);
+  return result.concat(["".concat(key, "\n - repository: ").concat(projectsInfo[key].repository, "\n - language: ").concat(projectsInfo[key].language, "\n - description: ").concat(projectsInfo[key].description)]);
 }, []).join('\n\n');
 
 var _projects = "\n".concat(projectList, "\n");
